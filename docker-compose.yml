@@ -1,0 +1,65 @@
+version: '2'
+
+services:
+    php:
+        build: ./php7
+        container_name: php
+        volumes_from:
+            - source_bitrix
+        ports:
+            - '9000:9000'
+        links:
+            - mysql
+        networks:
+            - bitrix
+        restart: always
+    web_server:
+        build: ./apache
+        container_name: webserver
+        depends_on:
+            - source_bitrix
+        volumes_from:
+            - source_bitrix
+        ports:
+            - '80:80'
+            - '443:443'
+        links:
+            - php
+        networks:
+            - bitrix
+        restart: always
+    mysql:
+        build: ./mysql
+        container_name: mysql
+        volumes_from:
+            - source_bitrix
+        ports:
+            - '0.0.0.0:3306:3306'
+        environment:
+            MYSQL_DATABASE: ${MYSQL_DATABASE}
+            MYSQL_USER: ${MYSQL_USER}
+            MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+        networks:
+            - bitrix
+        restart: always
+    source_bitrix:
+        image: alpine:latest
+        container_name: source_bitrix
+        volumes:
+            - ./logs/apache:/var/log/apache
+            - ./logs/php:/var/log/php
+            - ./logs/mysql:/var/log/mysql
+            - ./data/mysql:/var/lib/mysql
+            - ./www/html:/var/www/html
+            - ./www/bitrix:/var/www/bitrix
+            - /etc/localtime:/etc/localtime/:ro
+        networks:
+            - bitrix
+networks:
+    bitrix:
+        driver: bridge
+        ipam:
+            driver: default
+            config:
+                - subnet: 10.100.2.0/24
